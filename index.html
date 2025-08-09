@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Nota Digital Pro (Offline)</title>
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- PDF & Image Generation Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+      /* Apple-inspired Design System */
+      :root {
+        --bg-light: #f5f5f7;
+        --bg-dark: #1c1c1e;
+        --card-bg-light: #ffffff;
+        --card-bg-dark: #2c2c2e;
+        --text-primary-light: #1d1d1f;
+        --text-primary-dark: #f5f5f7;
+        --text-secondary-light: #6e6e73;
+        --text-secondary-dark: #8e8e93;
+        --border-light: #d2d2d7;
+        --border-dark: #424245;
+        --accent-blue: #007aff;
+        --accent-blue-hover: #0071e3;
+        --status-paid: #34c759;
+        --status-unpaid: #ff9500;
+      }
+
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, "Helvetica Neue", Arial, sans-serif;
+        background-color: var(--bg-light);
+        color: var(--text-primary-light);
+        transition: background-color 0.3s ease, color 0.3s ease;
+      }
+      .dark body {
+        background-color: var(--bg-dark);
+        color: var(--text-primary-dark);
+      }
+
+      .card {
+        background-color: var(--card-bg-light);
+        border-radius: 18px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+        transition: background-color 0.3s ease;
+      }
+      .dark .card {
+        background-color: var(--card-bg-dark);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+      }
+
+      .form-input {
+        width: 100%;
+        background-color: #f0f0f0;
+        border: 1px solid transparent;
+        border-radius: 10px;
+        padding: 12px;
+        font-size: 16px;
+        transition: all 0.2s ease;
+        color: var(--text-primary-light);
+      }
+      .dark .form-input {
+        background-color: #3a3a3c;
+        color: var(--text-primary-dark);
+      }
+      .form-input:focus {
+        outline: none;
+        border-color: var(--accent-blue);
+        box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.3);
+      }
+
+      .btn {
+        font-weight: 600;
+        padding: 12px 20px;
+        border-radius: 12px;
+        transition: all 0.2s ease;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+      }
+      .btn-primary {
+        background-color: var(--accent-blue);
+        color: white;
+      }
+      .btn-primary:hover {
+        background-color: var(--accent-blue-hover);
+      }
+      .btn-secondary {
+        background-color: #e5e5e5;
+        color: var(--text-primary-light);
+      }
+      .dark .btn-secondary {
+        background-color: #3a3a3c;
+        color: var(--text-primary-dark);
+      }
+      .btn-secondary:hover {
+        background-color: #dcdcdc;
+      }
+      .dark .btn-secondary:hover {
+        background-color: #4a4a4c;
+      }
+
+      .print-area {
+        display: none;
+      }
+      @media print {
+        body * {
+          visibility: hidden;
+        }
+        .print-area,
+        .print-area * {
+          visibility: visible;
+        }
+        .print-area {
+          position: absolute;
+          left: 0;
+          top: 0;
+          width: 100%;
+        }
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #c1c1c1;
+        border-radius: 10px;
+      }
+      .dark ::-webkit-scrollbar-thumb {
+        background: #555;
+      }
+
+      .modal-backdrop {
+        transition: opacity 0.3s ease;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Main Container -->
+    <div class="container mx-auto p-4 md:p-6 lg:p-8">
+      <!-- Header -->
+      <header class="flex justify-between items-center mb-8">
+        <h1 class="text-2xl md:text-3xl font-bold">Nota Digital Pro</h1>
+        <div class="flex items-center gap-2 sm:gap-4">
+          <button
+            id="settings-btn"
+            class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+          >
+            <svg
+              class="w-5 h-5 text-gray-800 dark:text-gray-200"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+              />
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+              />
+            </svg>
+          </button>
+          <button
+            id="theme-toggle"
+            class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
+          >
+            <svg
+              class="w-5 h-5 text-gray-800 dark:hidden"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"
+              />
+            </svg>
+            <svg
+              class="w-5 h-5 text-gray-200 hidden dark:block"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+              />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Layout -->
+      <div class="flex flex-col lg:flex-row gap-8">
+        <!-- Left Side: Form Inputs -->
+        <div class="lg:w-3/5 xl:w-3/5 flex-shrink-0">
+          <div class="card p-4 sm:p-6 md:p-8">
+            <form id="invoice-form" onsubmit="return false;" class="space-y-8">
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3
+                    class="text-lg font-semibold mb-3"
+                    style="color: var(--text-secondary-light)"
+                  >
+                    Dari:
+                  </h3>
+                  <div class="space-y-3">
+                    <input
+                      type="text"
+                      id="sellerName"
+                      placeholder="Nama Anda / Toko"
+                      class="form-input"
+                    />
+                    <input
+                      type="text"
+                      id="sellerAddress"
+                      placeholder="Alamat"
+                      class="form-input"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <h3
+                    class="text-lg font-semibold mb-3"
+                    style="color: var(--text-secondary-light)"
+                  >
+                    Untuk:
+                  </h3>
+                  <div class="space-y-3">
+                    <input
+                      type="text"
+                      id="buyerName"
+                      placeholder="Nama Pelanggan"
+                      class="form-input"
+                    />
+                    <input
+                      type="text"
+                      id="buyerAddress"
+                      placeholder="Alamat Pelanggan"
+                      class="form-input"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label
+                    for="invoiceNumber"
+                    class="block text-sm font-medium mb-2"
+                    style="color: var(--text-secondary-light)"
+                    >No. Nota</label
+                  >
+                  <input type="text" id="invoiceNumber" class="form-input" />
+                </div>
+                <div>
+                  <label
+                    for="invoiceDate"
+                    class="block text-sm font-medium mb-2"
+                    style="color: var(--text-secondary-light)"
+                    >Tanggal</label
+                  >
+                  <input type="date" id="invoiceDate" class="form-input" />
+                </div>
+              </div>
+
+              <div>
+                <h3 class="text-lg font-semibold mb-3">Rincian Barang</h3>
+                <div id="items-container" class="mb-3"></div>
+                <button
+                  id="add-item-btn"
+                  type="button"
+                  class="w-full btn btn-secondary"
+                >
+                  Tambah Barang
+                </button>
+                <datalist id="item-suggestions"></datalist>
+              </div>
+
+              <div
+                class="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t"
+                style="border-color: var(--border-light)"
+              >
+                <div>
+                  <label
+                    for="discount"
+                    class="block text-sm font-medium mb-2"
+                    style="color: var(--text-secondary-light)"
+                    >Diskon (%)</label
+                  >
+                  <input
+                    type="number"
+                    id="discount"
+                    value="0"
+                    min="0"
+                    max="100"
+                    class="form-input"
+                  />
+                </div>
+                <div>
+                  <label
+                    for="tax"
+                    class="block text-sm font-medium mb-2"
+                    style="color: var(--text-secondary-light)"
+                    >Pajak (%)</label
+                  >
+                  <input
+                    type="number"
+                    id="tax"
+                    value="0"
+                    min="0"
+                    class="form-input"
+                  />
+                </div>
+                <div>
+                  <label
+                    for="invoiceStatus"
+                    class="block text-sm font-medium mb-2"
+                    style="color: var(--text-secondary-light)"
+                    >Status</label
+                  >
+                  <select id="invoiceStatus" class="form-input">
+                    <option value="draf">Draf</option>
+                    <option value="belum-lunas">Belum Lunas</option>
+                    <option value="lunas">Lunas</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label
+                  for="notes"
+                  class="block text-sm font-medium mb-2"
+                  style="color: var(--text-secondary-light)"
+                  >Catatan</label
+                >
+                <textarea
+                  id="notes"
+                  rows="3"
+                  placeholder="Contoh: Pembayaran jatuh tempo dalam 30 hari."
+                  class="form-input"
+                ></textarea>
+              </div>
+            </form>
+          </div>
+        </div>
+
+        <!-- Right Side: Preview & Actions -->
+        <div class="lg:w-2/5 xl:w-2/5 flex-shrink-0 space-y-6">
+          <div id="invoice-preview-container" class="card p-6 md:p-8">
+            <div id="invoice-preview">
+              <header
+                class="flex justify-between items-start pb-6 mb-8 border-b-2"
+                style="border-color: var(--border-dark)"
+              >
+                <div>
+                  <img
+                    id="preview-logo"
+                    src="#"
+                    alt="Logo"
+                    class="h-16 mb-4 hidden"
+                  />
+                  <h2 id="preview-seller-name" class="text-2xl font-bold"></h2>
+                  <p
+                    id="preview-seller-address"
+                    class="text-sm"
+                    style="color: var(--text-secondary-dark)"
+                  ></p>
+                </div>
+                <div class="text-right flex-shrink-0 pl-4">
+                  <h3
+                    class="text-2xl md:text-3xl font-bold uppercase"
+                    style="color: var(--text-secondary-dark)"
+                  >
+                    NOTA
+                  </h3>
+                  <p class="text-sm" style="color: var(--text-secondary-dark)">
+                    #<span id="preview-invoice-number"></span>
+                  </p>
+                </div>
+              </header>
+              <section class="flex justify-between items-start mb-8">
+                <div>
+                  <h4
+                    class="text-sm font-bold mb-2"
+                    style="color: var(--text-secondary-dark)"
+                  >
+                    UNTUK
+                  </h4>
+                  <p id="preview-buyer-name" class="font-semibold"></p>
+                  <p
+                    id="preview-buyer-address"
+                    class="text-sm"
+                    style="color: var(--text-secondary-dark)"
+                  ></p>
+                </div>
+                <div class="text-right">
+                  <h4
+                    class="text-sm font-bold mb-2"
+                    style="color: var(--text-secondary-dark)"
+                  >
+                    TANGGAL
+                  </h4>
+                  <p id="preview-invoice-date" class="font-semibold"></p>
+                </div>
+              </section>
+              <section>
+                <div class="overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr style="color: var(--text-secondary-dark)">
+                        <th class="py-2 pr-2 text-left font-semibold">
+                          Deskripsi
+                        </th>
+                        <th class="py-2 px-2 text-center font-semibold">Jml</th>
+                        <th class="py-2 px-2 text-right font-semibold">
+                          Harga
+                        </th>
+                        <th class="py-2 pl-2 text-right font-semibold">
+                          Total
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody id="preview-items"></tbody>
+                    <tfoot class="font-semibold">
+                      <tr>
+                        <td
+                          colspan="3"
+                          class="pt-4 pb-1 text-right border-t"
+                          style="border-color: var(--border-light)"
+                        >
+                          Subtotal
+                        </td>
+                        <td
+                          id="preview-subtotal"
+                          class="pt-4 pb-1 text-right border-t"
+                          style="border-color: var(--border-light)"
+                        ></td>
+                      </tr>
+                      <tr style="color: var(--text-secondary-dark)">
+                        <td colspan="3" class="py-1 text-right">Diskon</td>
+                        <td id="preview-discount" class="py-1 text-right"></td>
+                      </tr>
+                      <tr style="color: var(--text-secondary-dark)">
+                        <td colspan="3" class="py-1 text-right">Pajak</td>
+                        <td id="preview-tax" class="py-1 text-right"></td>
+                      </tr>
+                      <tr class="font-bold text-lg">
+                        <td
+                          colspan="3"
+                          class="py-3 text-right border-t-2"
+                          style="border-color: var(--text-primary-dark)"
+                        >
+                          Total
+                        </td>
+                        <td
+                          id="preview-total"
+                          class="py-3 text-right border-t-2"
+                          style="border-color: var(--text-primary-dark)"
+                        ></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </section>
+              <footer
+                class="mt-8 pt-4 border-t"
+                style="border-color: var(--border-light)"
+              >
+                <p
+                  class="text-xs"
+                  style="color: var(--text-secondary-dark)"
+                  id="preview-notes"
+                ></p>
+              </footer>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <button id="new-invoice-btn" class="btn btn-secondary">
+              Nota Baru
+            </button>
+            <button id="save-local-btn" class="btn btn-secondary">
+              Simpan Lokal
+            </button>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <button id="download-image-btn" class="btn btn-primary">
+              Unduh Gambar
+            </button>
+            <button id="download-pdf-btn" class="btn btn-primary">
+              Unduh PDF
+            </button>
+          </div>
+
+          <div class="card p-4">
+            <h3 class="text-md font-semibold mb-3">Riwayat Lokal</h3>
+            <div id="history-list" class="max-h-60 overflow-y-auto pr-2"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div
+      id="settings-modal"
+      class="hidden fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center p-4 modal-backdrop"
+    >
+      <div class="card w-full max-w-md p-6 space-y-4">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-bold">Pengaturan</h2>
+          <button
+            class="close-modal-btn p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700"
+          >
+            <svg
+              class="w-6 h-6"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke-width="2"
+              stroke="currentColor"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        </div>
+        <div>
+          <label
+            for="currency-select"
+            class="block text-sm font-medium mb-2"
+            style="color: var(--text-secondary-light)"
+            >Mata Uang</label
+          >
+          <select id="currency-select" class="form-input">
+            <option value="IDR">Rupiah (IDR)</option>
+            <option value="USD">US Dollar (USD)</option>
+            <option value="EUR">Euro (EUR)</option>
+          </select>
+        </div>
+        <div>
+          <label
+            for="logo-input"
+            class="block text-sm font-medium mb-2"
+            style="color: var(--text-secondary-light)"
+            >Logo Perusahaan</label
+          >
+          <input
+            type="file"
+            id="logo-input"
+            accept="image/*"
+            class="form-input"
+          />
+          <button id="remove-logo-btn" class="hidden text-red-500 text-sm mt-2">
+            Hapus Logo
+          </button>
+        </div>
+        <button class="close-modal-btn btn btn-primary w-full">Selesai</button>
+      </div>
+    </div>
+
+    <!-- Notification Modal -->
+    <div
+      id="notification-modal"
+      class="fixed top-5 right-5 card p-4 max-w-sm z-50 opacity-0 translate-y-4 transition-all duration-300"
+    >
+      <h4 id="modal-title" class="font-bold"></h4>
+      <p
+        id="modal-message"
+        class="text-sm"
+        style="color: var(--text-secondary-dark)"
+      ></p>
+    </div>
+
+    <!-- For Printing -->
+    <div class="print-area"></div>
+
+    <script type="module">
+      // --- GLOBAL VARIABLES & CONFIG ---
+      let currentCurrency = "IDR";
+      let itemAutocompleteList =
+        JSON.parse(localStorage.getItem("itemAutocomplete")) || [];
+      let currentInvoiceId = null;
+
+      // --- DOM ELEMENTS ---
+      const form = document.getElementById("invoice-form");
+      const itemsContainer = document.getElementById("items-container");
+      const addItemBtn = document.getElementById("add-item-btn");
+      const downloadPdfBtn = document.getElementById("download-pdf-btn");
+      const downloadImageBtn = document.getElementById("download-image-btn");
+      const saveLocalBtn = document.getElementById("save-local-btn");
+      const historyListContainer = document.getElementById("history-list");
+      const themeToggleBtn = document.getElementById("theme-toggle");
+      const settingsBtn = document.getElementById("settings-btn");
+      const settingsModal = document.getElementById("settings-modal");
+      const currencySelect = document.getElementById("currency-select");
+      const logoInput = document.getElementById("logo-input");
+      const previewLogo = document.getElementById("preview-logo");
+      const removeLogoBtn = document.getElementById("remove-logo-btn");
+      const newInvoiceBtn = document.getElementById("new-invoice-btn");
+
+      // --- CORE FUNCTIONS ---
+      const updatePreview = () => {
+        document.getElementById("preview-seller-name").textContent =
+          document.getElementById("sellerName").value || "Nama Penjual";
+        document.getElementById("preview-seller-address").textContent =
+          document.getElementById("sellerAddress").value || "Alamat Penjual";
+        document.getElementById("preview-buyer-name").textContent =
+          document.getElementById("buyerName").value || "Nama Pembeli";
+        document.getElementById("preview-buyer-address").textContent =
+          document.getElementById("buyerAddress").value || "Alamat Pembeli";
+        document.getElementById("preview-invoice-number").textContent =
+          document.getElementById("invoiceNumber").value || "INV-XXXX";
+        document.getElementById("preview-invoice-date").textContent = new Date(
+          document.getElementById("invoiceDate").value
+        ).toLocaleDateString("id-ID", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
+
+        const previewItemsContainer = document.getElementById("preview-items");
+        previewItemsContainer.innerHTML = "";
+        let subtotal = 0;
+
+        itemsContainer.querySelectorAll(".item-row").forEach((row) => {
+          const name = row.querySelector('input[name="itemName"]').value;
+          const qty =
+            parseFloat(row.querySelector('input[name="itemQty"]').value) || 0;
+          const price =
+            parseFloat(row.querySelector('input[name="itemPrice"]').value) || 0;
+          const total = qty * price;
+          subtotal += total;
+
+          if (name || qty || price) {
+            previewItemsContainer.innerHTML += `
+                        <tr class="border-b" style="border-color: var(--border-light);">
+                            <td class="py-3 pr-2">${name || "Nama Barang"}</td>
+                            <td class="py-3 px-2 text-center">${qty}</td>
+                            <td class="py-3 px-2 text-right">${formatCurrency(
+                              price
+                            )}</td>
+                            <td class="py-3 pl-2 text-right font-medium">${formatCurrency(
+                              total
+                            )}</td>
+                        </tr>`;
+          }
+        });
+
+        const discount =
+          parseFloat(document.getElementById("discount").value) || 0;
+        const tax = parseFloat(document.getElementById("tax").value) || 0;
+        const discountAmount = subtotal * (discount / 100);
+        const subtotalAfterDiscount = subtotal - discountAmount;
+        const taxAmount = subtotalAfterDiscount * (tax / 100);
+        const finalTotal = subtotalAfterDiscount + taxAmount;
+
+        document.getElementById("preview-subtotal").textContent =
+          formatCurrency(subtotal);
+        document.getElementById(
+          "preview-discount"
+        ).textContent = `(${discount}%) ${formatCurrency(discountAmount)}`;
+        document.getElementById(
+          "preview-tax"
+        ).textContent = `(${tax}%) ${formatCurrency(taxAmount)}`;
+        document.getElementById("preview-total").textContent =
+          formatCurrency(finalTotal);
+        document.getElementById("preview-notes").textContent =
+          document.getElementById("notes").value ||
+          "Terima kasih atas kepercayaan Anda.";
+      };
+
+      const addItemRow = () => {
+        const itemRow = document.createElement("div");
+        itemRow.className = "item-row grid grid-cols-12 gap-3 mb-3";
+        itemRow.innerHTML = `
+                <div class="col-span-12 sm:col-span-4 relative">
+                    <input type="text" name="itemName" placeholder="Nama Barang" class="form-input" list="item-suggestions">
+                </div>
+                <input type="number" name="itemQty" placeholder="Jml" value="1" min="0" class="col-span-4 sm:col-span-2 form-input">
+                <input type="number" name="itemPrice" placeholder="Harga" min="0" class="col-span-5 sm:col-span-4 form-input">
+                <button type="button" class="delete-item-btn col-span-3 sm:col-span-2 bg-gray-200 dark:bg-gray-700 hover:bg-red-500 dark:hover:bg-red-500 text-gray-500 dark:text-gray-300 hover:text-white rounded-lg transition-all duration-200 flex items-center justify-center">
+                    <svg class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h--3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm4 0a1 1 0 012 0v6a1 1 0 11-2 0V8z" clip-rule="evenodd" /></svg>
+                </button>
+            `;
+        itemsContainer.appendChild(itemRow);
+        const nameInput = itemRow.querySelector('input[name="itemName"]');
+        nameInput.addEventListener("change", (e) => {
+          const selectedItem = itemAutocompleteList.find(
+            (item) => item.name === e.target.value
+          );
+          if (selectedItem) {
+            itemRow.querySelector('input[name="itemPrice"]').value =
+              selectedItem.price;
+            updatePreview();
+          }
+        });
+        updatePreview();
+      };
+
+      const formatCurrency = (amount) =>
+        new Intl.NumberFormat("id-ID", {
+          style: "currency",
+          currency: currentCurrency,
+          minimumFractionDigits: 2,
+        }).format(amount);
+      const generateInvoiceNumber = () =>
+        `INV-${new Date().getTime().toString().slice(-6)}`;
+
+      const createRoundedCanvas = (sourceCanvas) => {
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        const width = sourceCanvas.width;
+        const height = sourceCanvas.height;
+        const radius = 30; // Pixel radius for rounded corners
+
+        canvas.width = width;
+        canvas.height = height;
+
+        context.beginPath();
+        context.moveTo(radius, 0);
+        context.lineTo(width - radius, 0);
+        context.quadraticCurveTo(width, 0, width, radius);
+        context.lineTo(width, height - radius);
+        context.quadraticCurveTo(width, height, width - radius, height);
+        context.lineTo(radius, height);
+        context.quadraticCurveTo(0, height, 0, height - radius);
+        context.lineTo(0, radius);
+        context.quadraticCurveTo(0, 0, radius, 0);
+        context.closePath();
+        context.clip();
+        context.drawImage(sourceCanvas, 0, 0, width, height);
+
+        return canvas;
+      };
+
+      const generatePdf = () => {
+        const invoiceElement = document.getElementById("invoice-preview");
+        const invoiceNumber =
+          document.getElementById("invoiceNumber").value || "nota";
+        showModal("Memproses...", "Sedang membuat file PDF...");
+
+        const originalStyle = invoiceElement.style.cssText;
+        invoiceElement.style.height = "auto";
+        invoiceElement.style.maxHeight = "none";
+        invoiceElement.style.overflow = "visible";
+
+        html2canvas(invoiceElement, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: document.documentElement.classList.contains("dark")
+            ? "#2c2c2e"
+            : "#ffffff",
+        })
+          .then((canvas) => {
+            const roundedCanvas = createRoundedCanvas(canvas);
+            const { jsPDF } = window.jspdf;
+            const imgData = roundedCanvas.toDataURL("image/png");
+            const pdf = new jsPDF("p", "mm", "a4");
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+
+            const canvasWidth = roundedCanvas.width;
+            const canvasHeight = roundedCanvas.height;
+            const ratio = canvasHeight / canvasWidth;
+
+            const imgHeight = pdfWidth * ratio;
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            pdf.addImage(imgData, "PNG", 0, position, pdfWidth, imgHeight);
+            heightLeft -= pdfHeight;
+
+            while (heightLeft > 0) {
+              position -= pdfHeight;
+              pdf.addPage();
+              pdf.addImage(imgData, "PNG", 0, position, pdfWidth, imgHeight);
+              heightLeft -= pdfHeight;
+            }
+
+            pdf.save(`${invoiceNumber}.pdf`);
+            showModal("Sukses!", "File PDF berhasil diunduh.");
+          })
+          .catch((err) => {
+            console.error("PDF Generation Error:", err);
+            showModal("Error", "Gagal membuat PDF. Coba lagi.");
+          })
+          .finally(() => {
+            invoiceElement.style.cssText = originalStyle;
+          });
+      };
+
+      const generateImage = () => {
+        const invoiceElement = document.getElementById("invoice-preview");
+        const invoiceNumber =
+          document.getElementById("invoiceNumber").value || "nota";
+        showModal("Memproses...", "Sedang membuat file Gambar...");
+
+        const originalStyle = invoiceElement.style.cssText;
+        invoiceElement.style.height = "auto";
+        invoiceElement.style.maxHeight = "none";
+        invoiceElement.style.overflow = "visible";
+
+        html2canvas(invoiceElement, {
+          scale: 3,
+          useCORS: true,
+          backgroundColor: document.documentElement.classList.contains("dark")
+            ? "#2c2c2e"
+            : "#ffffff",
+        })
+          .then((canvas) => {
+            const roundedCanvas = createRoundedCanvas(canvas);
+            const link = document.createElement("a");
+            link.download = `${invoiceNumber}.png`;
+            link.href = roundedCanvas.toDataURL("image/png");
+            link.click();
+            showModal("Sukses!", "File Gambar berhasil diunduh.");
+          })
+          .catch((err) => {
+            console.error(err);
+            showModal("Error", "Gagal membuat Gambar. Coba lagi.");
+          })
+          .finally(() => {
+            invoiceElement.style.cssText = originalStyle;
+          });
+      };
+
+      // --- Local Storage Functions ---
+      const saveToLocal = () => {
+        showModal("Menyimpan...", "Menyimpan nota ke browser...");
+
+        const items = Array.from(
+          itemsContainer.querySelectorAll(".item-row")
+        ).map((row) => {
+          const name = row.querySelector('input[name="itemName"]').value;
+          const price = row.querySelector('input[name="itemPrice"]').value;
+          if (
+            name &&
+            !itemAutocompleteList.some((item) => item.name === name)
+          ) {
+            itemAutocompleteList.push({ name, price });
+          }
+          return {
+            name,
+            qty: row.querySelector('input[name="itemQty"]').value,
+            price,
+          };
+        });
+        localStorage.setItem(
+          "itemAutocomplete",
+          JSON.stringify(itemAutocompleteList)
+        );
+        updateAutocompleteDatalist();
+
+        const invoiceData = {
+          id: currentInvoiceId || `local-${Date.now()}`,
+          sellerName: document.getElementById("sellerName").value,
+          buyerName: document.getElementById("buyerName").value,
+          sellerAddress: document.getElementById("sellerAddress").value,
+          buyerAddress: document.getElementById("buyerAddress").value,
+          invoiceNumber: document.getElementById("invoiceNumber").value,
+          invoiceDate: document.getElementById("invoiceDate").value,
+          discount: document.getElementById("discount").value,
+          tax: document.getElementById("tax").value,
+          notes: document.getElementById("notes").value,
+          items: items,
+          status: document.getElementById("invoiceStatus").value,
+          currency: currentCurrency,
+          lastSaved: new Date().toISOString(),
+        };
+
+        let localInvoices =
+          JSON.parse(localStorage.getItem("localInvoices")) || [];
+        const existingIndex = localInvoices.findIndex(
+          (inv) => inv.id === invoiceData.id
+        );
+        if (existingIndex > -1) {
+          localInvoices[existingIndex] = invoiceData;
+        } else {
+          localInvoices.push(invoiceData);
+        }
+
+        localStorage.setItem("localInvoices", JSON.stringify(localInvoices));
+        currentInvoiceId = invoiceData.id;
+        renderLocalHistory();
+        showModal("Sukses!", `Nota berhasil disimpan di browser.`);
+      };
+
+      const loadFromLocal = (invoiceId) => {
+        let localInvoices =
+          JSON.parse(localStorage.getItem("localInvoices")) || [];
+        const data = localInvoices.find((inv) => inv.id === invoiceId);
+        if (data) {
+          currentInvoiceId = data.id;
+          document.getElementById("sellerName").value = data.sellerName || "";
+          document.getElementById("buyerName").value = data.buyerName || "";
+          document.getElementById("sellerAddress").value =
+            data.sellerAddress || "";
+          document.getElementById("buyerAddress").value =
+            data.buyerAddress || "";
+          document.getElementById("invoiceNumber").value =
+            data.invoiceNumber || "";
+          document.getElementById("invoiceDate").value = data.invoiceDate || "";
+          document.getElementById("discount").value = data.discount || 0;
+          document.getElementById("tax").value = data.tax || 0;
+          document.getElementById("notes").value = data.notes || "";
+          document.getElementById("invoiceStatus").value =
+            data.status || "draf";
+          currencySelect.value = data.currency || "IDR";
+          currentCurrency = data.currency || "IDR";
+
+          itemsContainer.innerHTML = "";
+          if (data.items && Array.isArray(data.items)) {
+            data.items.forEach((item) => {
+              addItemRow();
+              const newRow = itemsContainer.lastElementChild;
+              newRow.querySelector('input[name="itemName"]').value =
+                item.name || "";
+              newRow.querySelector('input[name="itemQty"]').value =
+                item.qty || 1;
+              newRow.querySelector('input[name="itemPrice"]').value =
+                item.price || 0;
+            });
+          }
+          updatePreview();
+          showModal("Sukses", "Nota berhasil dimuat dari browser.");
+        } else {
+          showModal("Error", "Nota tidak ditemukan.");
+        }
+      };
+
+      const deleteFromLocal = (invoiceId) => {
+        if (
+          !confirm("Apakah Anda yakin ingin menghapus nota ini dari browser?")
+        )
+          return;
+        let localInvoices =
+          JSON.parse(localStorage.getItem("localInvoices")) || [];
+        const updatedInvoices = localInvoices.filter(
+          (inv) => inv.id !== invoiceId
+        );
+        localStorage.setItem("localInvoices", JSON.stringify(updatedInvoices));
+
+        if (currentInvoiceId === invoiceId) {
+          resetForm();
+        }
+        renderLocalHistory();
+        showModal("Sukses", "Nota berhasil dihapus.");
+      };
+
+      const renderLocalHistory = () => {
+        historyListContainer.innerHTML = "";
+        let localInvoices =
+          JSON.parse(localStorage.getItem("localInvoices")) || [];
+
+        if (localInvoices.length === 0) {
+          historyListContainer.innerHTML = `<p class="text-center py-4" style="color: var(--text-secondary-light);">Belum ada riwayat.</p>`;
+          return;
+        }
+
+        localInvoices.sort(
+          (a, b) => new Date(b.lastSaved) - new Date(a.lastSaved)
+        );
+
+        localInvoices.forEach((invoice) => {
+          const statusClasses = {
+            lunas:
+              "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300",
+            "belum-lunas":
+              "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300",
+            draf: "bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300",
+          };
+          const statusText = {
+            lunas: "Lunas",
+            "belum-lunas": "Belum Lunas",
+            draf: "Draf",
+          };
+          const historyEl = document.createElement("div");
+          historyEl.className =
+            "history-item flex justify-between items-center bg-gray-100 dark:bg-gray-800 p-3 rounded-lg mb-2";
+          historyEl.innerHTML = `
+                    <div>
+                        <p class="font-semibold">${
+                          invoice.invoiceNumber || "Tanpa Nomor"
+                        } <span class="ml-2 text-xs font-medium px-2 py-0.5 rounded-full ${
+            statusClasses[invoice.status] || statusClasses.draf
+          }">${statusText[invoice.status] || "Draf"}</span></p>
+                        <p class="text-sm" style="color: var(--text-secondary-light);">${
+                          invoice.buyerName || "Tanpa Nama"
+                        } - ${new Date(invoice.lastSaved).toLocaleDateString(
+            "id-ID"
+          )}</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button data-id="${
+                          invoice.id
+                        }" class="load-local-btn p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors">Muat</button>
+                        <button data-id="${
+                          invoice.id
+                        }" class="delete-local-btn p-2 rounded-lg bg-gray-200 dark:bg-gray-700 hover:bg-red-500 dark:hover:bg-red-500 text-gray-600 dark:text-gray-300 hover:text-white transition-colors">Hapus</button>
+                    </div>
+                `;
+          historyListContainer.appendChild(historyEl);
+        });
+      };
+
+      const resetForm = () => {
+        currentInvoiceId = null;
+        form.reset();
+        itemsContainer.innerHTML = "";
+        document.getElementById("invoiceDate").valueAsDate = new Date();
+        document.getElementById("invoiceNumber").value =
+          generateInvoiceNumber();
+        addItemRow();
+        updatePreview();
+        showModal("Info", "Formulir telah dibersihkan.");
+      };
+
+      const showModal = (title, message) => {
+        const modal = document.getElementById("notification-modal");
+        document.getElementById("modal-title").textContent = title;
+        document.getElementById("modal-message").textContent = message;
+        modal.classList.remove("opacity-0", "translate-y-4");
+        setTimeout(() => {
+          modal.classList.add("opacity-0", "translate-y-4");
+        }, 3000);
+      };
+
+      const toggleTheme = () => {
+        document.documentElement.classList.toggle("dark");
+        localStorage.setItem(
+          "theme",
+          document.documentElement.classList.contains("dark") ? "dark" : "light"
+        );
+        updatePreview();
+      };
+
+      const updateAutocompleteDatalist = () => {
+        const datalist = document.getElementById("item-suggestions");
+        datalist.innerHTML = "";
+        itemAutocompleteList.forEach((item) => {
+          const option = document.createElement("option");
+          option.value = item.name;
+          datalist.appendChild(option);
+        });
+      };
+
+      // --- EVENT LISTENERS ---
+      form.addEventListener("input", updatePreview);
+      addItemBtn.addEventListener("click", addItemRow);
+      downloadPdfBtn.addEventListener("click", generatePdf);
+      downloadImageBtn.addEventListener("click", generateImage);
+      saveLocalBtn.addEventListener("click", saveToLocal);
+      newInvoiceBtn.addEventListener("click", resetForm);
+      themeToggleBtn.addEventListener("click", toggleTheme);
+      settingsBtn.addEventListener("click", () =>
+        settingsModal.classList.remove("hidden")
+      );
+      settingsModal.addEventListener("click", (e) => {
+        if (
+          e.target === settingsModal ||
+          e.target.closest(".close-modal-btn")
+        ) {
+          settingsModal.classList.add("hidden");
+        }
+      });
+      currencySelect.addEventListener("change", (e) => {
+        currentCurrency = e.target.value;
+        updatePreview();
+      });
+      logoInput.addEventListener("change", (e) => {
+        const file = e.target.files[0];
+        if (file) {
+          const reader = new FileReader();
+          reader.onload = (event) => {
+            const logoData = event.target.result;
+            previewLogo.src = logoData;
+            previewLogo.classList.remove("hidden");
+            removeLogoBtn.classList.remove("hidden");
+            localStorage.setItem("companyLogo", logoData);
+          };
+          reader.readAsDataURL(file);
+        }
+      });
+      removeLogoBtn.addEventListener("click", () => {
+        previewLogo.src = "#";
+        previewLogo.classList.add("hidden");
+        removeLogoBtn.classList.add("hidden");
+        logoInput.value = "";
+        localStorage.removeItem("companyLogo");
+      });
+
+      document.body.addEventListener("click", (e) => {
+        if (e.target.closest(".delete-item-btn")) {
+          e.target.closest(".item-row").remove();
+          updatePreview();
+        }
+        if (e.target.closest(".load-local-btn")) {
+          loadFromLocal(e.target.closest(".load-local-btn").dataset.id);
+        }
+        if (e.target.closest(".delete-local-btn")) {
+          deleteFromLocal(e.target.closest(".delete-local-btn").dataset.id);
+        }
+      });
+
+      // --- ON LOAD INITIALIZATION ---
+      window.onload = () => {
+        if (
+          localStorage.getItem("theme") === "dark" ||
+          (!("theme" in localStorage) &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches)
+        ) {
+          document.documentElement.classList.add("dark");
+        }
+        const savedLogo = localStorage.getItem("companyLogo");
+        if (savedLogo) {
+          previewLogo.src = savedLogo;
+          previewLogo.classList.remove("hidden");
+          removeLogoBtn.classList.remove("hidden");
+        }
+        resetForm();
+        renderLocalHistory();
+        updateAutocompleteDatalist();
+      };
+    </script>
+  </body>
+</html>
